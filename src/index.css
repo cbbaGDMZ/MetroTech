@@ -1,0 +1,26 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+@property --y-0 { syntax: '<percentage>'; inherits: false; initial-value: 89.7%; }
+@property --c-0 { syntax: '<color>'; inherits: false; initial-value: rgba(56, 80, 126, 0.73); }
+@property --x-0 { syntax: '<percentage>'; inherits: false; initial-value: 2.78%; }
+@property --s-start-0 { syntax: '<percentage>'; inherits: false; initial-value: 12.78%; }
+@property --s-end-0 { syntax: '<percentage>'; inherits: false; initial-value: 44.89%; }
+
+@keyframes ani-bg {
+    0%   { --y-0: 89.7%;  --c-0: rgba(61, 88, 138, 0.649);    --x-0: 2.78%;  --s-start-0: 12.78%; --s-end-0: 44.89%; }
+    50%  { --y-0: 14.1%;  --c-0: hsla(219,39%,39%,0.61); --x-0: 28.16%; --s-start-0: 12.47%; --s-end-0: 52.2%;  }
+    100% { --y-0: 87.27%; --c-0: hsla(219, 39%, 39%, 0.546); --x-0: 51.67%; --s-start-0: 15.45%; --s-end-0: 53.96%; }
+}
+
+.bg-animated {
+    background-color: rgb(20, 27, 42);
+    background-image: radial-gradient(
+        circle at var(--x-0) var(--y-0),
+        var(--c-0) var(--s-start-0),
+        transparent var(--s-end-0)
+    );
+    animation: ani-bg 15s linear infinite alternate-reverse;
+    will-change: transform, opacity;
+    contain: paint;
+}
