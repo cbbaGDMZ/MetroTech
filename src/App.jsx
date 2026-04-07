@@ -9,6 +9,7 @@ import NuevoMantenimiento from './pages/admin/mantenimiento/NuevoMantenimiento'
 import RegistrarEquipo from './pages/admin/RegistrarEquipo'
 import HistorialMantenimiento from './pages/admin/mantenimiento/HIstorialMantenimiento'
 import Layout from './components/Layout'
+import FormularioEquipo from './pages/admin/equipos/FormularioEquipo'
 
 function App() {
     useAuth()
@@ -26,6 +27,7 @@ function App() {
                 <Route path="/admin/equipos/registrar" element={<RegistrarEquipo />} />
                 <Route path="/admin/mantenimiento/nuevo" element={<NuevoMantenimiento />} />
                 <Route path="/admin/mantenimiento/historial" element={<HistorialMantenimiento />} />
+                <Route path="/admin/equipos/formulario" element={<FormularioEquipo />} />
             </Route>
         </Routes>
     )
