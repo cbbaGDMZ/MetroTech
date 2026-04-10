@@ -1,21 +1,37 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useQuery} from '@tanstack/react-query'
+import { supabase } from '../../lib/supabase'
 
 const RegistrarEquipo = () => {
     const navigate = useNavigate()
     const [busqueda, setBusqueda] = useState('')
 
-    const equipos = [
-        { id: 1, codigo: 'EQ-001', cliente: 'Juan Pérez', marca: 'Leica', modelo: 'TS16', serie: 'SN123456', tipo: 'Estación Total' },
-        { id: 2, codigo: 'EQ-002', cliente: 'Empresa ABC', marca: 'Trimble', modelo: 'R10', serie: 'SN789012', tipo: 'GPS' },
-        { id: 3, codigo: 'EQ-003', cliente: 'Carlos López', marca: 'Topcon', modelo: 'AT-B4', serie: 'SN345678', tipo: 'Nivel' },
-    ]
+    const { data : equipos = [] , isLoading } = useQuery({
+        queryKey:['equipos'],
+        queryFn: async () => {
+            const {data, error}=await supabase
+                .from('equipo')
+                .select(`
+                    id,
+                    marca,
+                    modelo,
+                    num_serie,
+                    tipo_equipo,
+                    cliente(nombre)
+                `)
+            if (error) throw error
+            return data
+        }
+    })
 
     const equiposFiltrados = equipos.filter(e =>
-        e.cliente.toLowerCase().includes(busqueda.toLowerCase()) ||
-        e.marca.toLowerCase().includes(busqueda.toLowerCase()) ||
-        e.codigo.toLowerCase().includes(busqueda.toLowerCase())
+        e.cliente?.nombre?.toLowerCase().includes(busqueda.toLowerCase()) ||
+        e.marca?.toLowerCase().includes(busqueda.toLowerCase()) ||
+        e.num_serie?.toLowerCase().includes(busqueda.toLowerCase())
     )
+
+    if (isLoading) return <div className="text-white/50 p-6">Cargando equipos...</div>
 
     return (
         <div className="w-full min-h-full p-6"
@@ -64,7 +80,6 @@ const RegistrarEquipo = () => {
                 <table className="w-full text-sm">
                     <thead>
                         <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.03)" }}>
-                            <th className="text-left px-4 py-3 text-white/40 font-medium">Código</th>
                             <th className="text-left px-4 py-3 text-white/40 font-medium">Cliente</th>
                             <th className="text-left px-4 py-3 text-white/40 font-medium">Marca</th>
                             <th className="text-left px-4 py-3 text-white/40 font-medium">Modelo</th>
@@ -84,20 +99,20 @@ const RegistrarEquipo = () => {
                                     style={{ borderBottom: index < equiposFiltrados.length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none" }}
                                     className="hover:bg-white/3 transition-all"
                                 >
-                                    <td className="px-4 py-3 text-blue-400/80 font-medium">{equipo.codigo}</td>
-                                    <td className="px-4 py-3 text-white/70">{equipo.cliente}</td>
+                                    <td className="px-4 py-3 text-white/70">{equipo.cliente?.nombre}</td>
                                     <td className="px-4 py-3 text-white/70">{equipo.marca}</td>
                                     <td className="px-4 py-3 text-white/70">{equipo.modelo}</td>
-                                    <td className="px-4 py-3 text-white/70">{equipo.serie}</td>
+                                    <td className="px-4 py-3 text-white/70">{equipo.num_serie}</td>
+
                                     <td className="px-4 py-3">
                                         <span className="px-2 py-1 rounded-md text-xs"
                                             style={{ background: "rgba(59,130,246,0.15)", color: "rgba(147,197,253,0.9)" }}
                                         >
-                                            {equipo.tipo}
+                                            {equipo.tipo_equipo}
                                         </span>
                                     </td>
                                     <td className="px-4 py-3">
-                                        <button className="text-white/30 hover:text-white/70 transition-all text-xs">Ver</button>
+                                        <button className="text-white/30 hover:text-white/70 transition-all text-xs">Nuevo Mantenimiento</button>
                                     </td>
                                 </tr>
                             ))
