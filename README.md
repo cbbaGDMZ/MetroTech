@@ -38,6 +38,7 @@ cd MetroTech
 
 ```bash
 npm install
+npm install recharts
 ```
 
 ### 3. Configurar variables de entorno
