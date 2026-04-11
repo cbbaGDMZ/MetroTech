@@ -1,25 +1,21 @@
 import { create } from "zustand";
 
-const useUserStore = create((set)=>({ //funcion que crea los estados iniciales
-    //estados
-    usuario : null,
-    rol : null ,
-    //significa que nadie esta logueado
-
-    //acciones
-    setUsuario : (nuevousuario, nuevorol) =>
+const useUserStore = create((set) => ({
+    usuario: null,
+    rol: null,
+    loading: true,
+    setUsuario: (nuevousuario, nuevorol) =>
         set({
             usuario: nuevousuario,
-            rol:nuevorol,
-        }), 
-        //resive esos datos y le dice  zustand que revise esos nuevos datos y las actualiza
-
-    //limpia el esado y lo regresa a null 
-    clearUsuario : () =>
+            rol: nuevorol,
+            loading: false, // 👈 esto faltaba
+        }),
+    clearUsuario: () =>
         set({
-            usuario:null,
-            rol:null,
+            usuario: null,
+            rol: null,
+            loading: false, // 👈 esto faltaba
         })
 }));
 
-export { useUserStore};
+export { useUserStore };
