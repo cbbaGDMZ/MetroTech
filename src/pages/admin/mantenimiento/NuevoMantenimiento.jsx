@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { supabase } from '../../../lib/supabase'
+import { useLocation } from 'react-router-dom'
 
 const schema = z.object({
     id_equipo: z.string().min(1, 'Seleccioná un equipo'),
@@ -129,6 +130,9 @@ export default function NuevoMantenimiento() {
         { label: 'Mantenimientos activos', value: activos, color: '#34d399' },
         { label: 'Mantenimientos del mes', value: delMes, color: '#a78bfa' },
     ]
+
+    const location = useLocation()
+    const equipoPreseleccionado = location.state?.id_equipo
 
     return (
         <div style={{

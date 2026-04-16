@@ -28,7 +28,7 @@ function App() {
                 <Route path="/admin/mantenimiento/nuevo" element={<NuevoMantenimiento />} />
                 <Route path="/admin/mantenimiento/historial" element={<HistorialMantenimiento />} />
                 <Route path="/admin/equipos/formulario" element={<FormularioEquipo />} />
-                        
+                
             </Route>
         </Routes>
     )

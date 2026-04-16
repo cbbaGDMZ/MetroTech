@@ -6,10 +6,10 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { supabase, supabaseAdmin } from '../../lib/supabase'
 
 const schema = z.object({
-    nombre: z.string().min(2, 'Mínimo 2 caracteres'),
-    apellido: z.string().min(2, 'Mínimo 2 caracteres'),
+    nombre: z.string().min(2, 'Mínimo 2 caracteres').max(50, 'Máximo 50 caracteres').regex(/^[a-zA-ZáéíóúÁÉÍÓÚüÜ\s]+$/, 'Solo letras y espacios'),
+    apellido: z.string().min(2, 'Mínimo 2 caracteres').max(50, 'Máximo 50 caracteres').regex(/^[a-zA-ZáéíóúÁÉÍÓÚüÜ\s]+$/, 'Solo letras y espacios'),
     email: z.string().email('Email inválido'),
-    telefono: z.string().min(7, 'Teléfono inválido'),
+    telefono: z.string().min(7, 'Mínimo 7 dígitos').max(8, 'Máximo 8 dígitos').regex(/^\d+$/, 'Solo números'),
     rol: z.enum(['admin', 'tecnico', 'secretaria'], { required_error: 'Seleccioná un rol' }),
     password: z.string().min(6, 'Mínimo 6 caracteres'),
 })

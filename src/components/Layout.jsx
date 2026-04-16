@@ -14,19 +14,22 @@ const Layout = () => {
             {/* Sidebar + Contenido */}
             <div className="flex flex-1 gap-3 p-3 pt-0">
 
-                {/* Sidebar */}
-                <div
-                    className="w-48 flex flex-col"
-                    style={{
-                        backgroundColor: "rgba(13, 31, 60, 0.45)",
-                        backdropFilter: "blur(12px)",
-                        WebkitBackdropFilter: "blur(12px)",
-                        border: "1px solid rgba(255,255,255,0.08)",
-                        borderRadius: "12px",
-                    }}
-                >
-                    < Sidebar />
-                </div>
+            {/* Sidebar */}
+            <div
+                className="w-48 flex-shrink-0"
+                style={{
+                    position: 'sticky',
+                    top: '12px',
+                    height: 'calc(100vh - 90px)',
+                    backgroundColor: "rgba(13, 31, 60, 0.45)",
+                    backdropFilter: "blur(12px)",
+                    WebkitBackdropFilter: "blur(12px)",
+                    border: "1px solid rgba(255,255,255,0.08)",
+                    borderRadius: "12px",
+                }}
+            >
+                <Sidebar />
+            </div>
 
                 {/* Contenido */}
                 <div className="flex-1">

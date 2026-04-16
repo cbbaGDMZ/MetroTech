@@ -7,19 +7,19 @@ import { useNavigate } from "react-router-dom"
 
 const loginschema = z.object({
     email: z.email("Email inválido"),
-    password: z.string().min(6, "Contraseña Incorrecta")
+    password: z.string().max(20, "Máximo 20 caracteres")
 })
 
 const Login = () => {
     const {
         register,
         handleSubmit,
+        setError,
         formState : {errors},
-
     } = useForm({
-        resolver: zodResolver(loginschema) //conecta Zod con ract hook form
-
+        resolver: zodResolver(loginschema), //conecta Zod con ract hook form
     })
+
 
     const navigate = useNavigate()
 
@@ -31,8 +31,9 @@ const Login = () => {
 
 
         if (error) {
-            console.log("Error al iniciar sesion:", error.message)
+            setError('root', { message: 'Correo o contraseña incorrectos' })
         }
+
         else {
             const rol = authData.user.user_metadata.rol
             console.log("rol:", rol)
@@ -136,6 +137,10 @@ const Login = () => {
                             </div>
                             {errors.password && <p className="text-xs text-red-400/80">{errors.password.message}</p>}
                         </div>
+
+                        {errors.root && (
+                            <p className="text-xs text-red-400/80 text-center">{errors.root.message}</p>
+                        )}
 
                         {/* Botón */}
                         <button

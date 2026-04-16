@@ -47,6 +47,7 @@ export default function HistorialMantenimiento() {
         if (filtroEquipo && !`${equipo?.marca} ${equipo?.modelo}`.toLowerCase().includes(filtroEquipo.toLowerCase())) return false
         if (filtroSerie && !equipo?.num_serie?.toLowerCase().includes(filtroSerie.toLowerCase())) return false
         if (filtroFecha && !a.fecha_asignacion?.startsWith(filtroFecha)) return false
+        if (filtroFecha && !a.usuario?.nombre?.startsWith(filtroFecha)) return false
         return true
     })
 
@@ -190,6 +191,12 @@ export default function HistorialMantenimiento() {
                         Completados
                     </h2>
                     <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                        <input
+                            style={inputStyle}
+                            placeholder="Buscar cliente..."
+                            value={filtroEquipo}
+                            onChange={e => setFiltroEquipo(e.target.value)}
+                        />
                         <input
                             style={inputStyle}
                             placeholder="Buscar equipo..."
