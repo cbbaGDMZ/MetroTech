@@ -6,7 +6,7 @@ import { useNavigate } from "react-router-dom"
 
 
 const loginschema = z.object({
-    email: z.email("Email inválido"),
+    email: z.string().email("Email inválido"),
     password: z.string().max(20, "Máximo 20 caracteres")
 })
 
@@ -23,25 +23,28 @@ const Login = () => {
 
     const navigate = useNavigate()
 
-    const onSubmit = async (data) =>{
+    const onSubmit = async (data) => {
+        console.log('onSubmit ejecutado', data)
+        try {
             const { data: authData, error } = await supabase.auth.signInWithPassword({
-            email: data.email,
-            password: data.password,
-        })
+                email: data.email,
+                password: data.password,
+            })
+            console.log('authData:', authData)
+            console.log('error:', error)
 
-
-        if (error) {
-            setError('root', { message: 'Correo o contraseña incorrectos' })
+            if (error) {
+                setError('root', { message: 'Correo o contraseña incorrectos' })
+            } else {
+                const rol = authData.user.user_metadata.rol
+                console.log('rol:', rol)
+                if (rol === 'admin') navigate('/admin/dashboard')
+                else if (rol === 'tecnico') navigate('/tecnico/dashboard')
+                else if (rol === 'secretaria') navigate('/secretaria/dashboard')
+            }
+        } catch (e) {
+            console.error('excepción:', e)
         }
-
-        else {
-            const rol = authData.user.user_metadata.rol
-            console.log("rol:", rol)
-            if (rol === "admin") navigate("/admin/dashboard")
-            else if (rol === "tecnico") navigate("/tecnico/dashboard")
-            else if (rol === "secretaria") navigate("/secretaria/dashboard")
-        }
-
     }
 
     return(

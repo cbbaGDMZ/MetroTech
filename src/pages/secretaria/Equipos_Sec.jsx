@@ -1,17 +1,4 @@
-export default function Equipos() {
-    return (
-        <div
-            style={{
-                backgroundColor: "rgba(13, 31, 60, 0.45)",
-                backdropFilter: "blur(12px)",
-                WebkitBackdropFilter: "blur(12px)",
-                border: "1px solid rgba(255,255,255,0.08)",
-                borderRadius: "12px",
-            }}
-            className="p-8"
-        >
-            <h1 className="text-3xl font-bold text-white mb-4">Equipos</h1>
-            <p className="text-gray-400 text-lg">Módulo en construcción</p>
-        </div>
-    )
+// Equipos_Sec.jsx
+export default function Equipos_Sec() {
+    return <div style={{ padding: '24px', color: 'rgba(255,255,255,0.5)' }}>Equipos Sec — en proceso de creación</div>
 }

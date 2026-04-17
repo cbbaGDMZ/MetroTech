@@ -11,7 +11,7 @@ const schema = z.object({
     email: z.string().email('Email inválido'),
     telefono: z.string().min(7, 'Mínimo 7 dígitos').max(8, 'Máximo 8 dígitos').regex(/^\d+$/, 'Solo números'),
     rol: z.enum(['admin', 'tecnico', 'secretaria'], { required_error: 'Seleccioná un rol' }),
-    password: z.string().min(6, 'Mínimo 6 caracteres'),
+    password: z.string().min(6, 'Mínimo 6 caracteres').or(z.literal('')),
 })
 
 const fetchUsuarios = async () => {
@@ -35,6 +35,8 @@ const estadoColor = (activo) => activo
 
 export default function Personal() {
     const [modalOpen, setModalOpen] = useState(false)
+    const [usuarioEditando, setUsuarioEditando] = useState(null)
+    const [usuarioEliminando, setUsuarioEliminando] = useState(null)
     const [errorMsg, setErrorMsg] = useState('')
     const queryClient = useQueryClient()
 
@@ -43,9 +45,35 @@ export default function Personal() {
         queryFn: fetchUsuarios,
     })
 
-    const { register, handleSubmit, reset, formState: { errors } } = useForm({
+    const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm({
         resolver: zodResolver(schema),
     })
+
+    const abrirCrear = () => {
+        setUsuarioEditando(null)
+        reset({ nombre: '', apellido: '', email: '', telefono: '', rol: '', password: '' })
+        setErrorMsg('')
+        setModalOpen(true)
+    }
+
+    const abrirEditar = (u) => {
+        setUsuarioEditando(u)
+        setValue('nombre', u.nombre)
+        setValue('apellido', u.apellido)
+        setValue('email', u.email)
+        setValue('telefono', u.telefono || '')
+        setValue('rol', u.rol)
+        setValue('password', '')
+        setErrorMsg('')
+        setModalOpen(true)
+    }
+
+    const cerrarModal = () => {
+        setModalOpen(false)
+        setUsuarioEditando(null)
+        reset()
+        setErrorMsg('')
+    }
 
     const crearUsuario = useMutation({
         mutationFn: async (values) => {
@@ -71,14 +99,59 @@ export default function Personal() {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['usuarios'] })
-            reset()
-            setModalOpen(false)
-            setErrorMsg('')
+            cerrarModal()
         },
-        onError: (err) => {
-            setErrorMsg(err.message || 'Error al crear el usuario')
-        },
+        onError: (err) => setErrorMsg(err.message || 'Error al crear el usuario'),
     })
+
+    const editarUsuario = useMutation({
+        mutationFn: async (values) => {
+            const updates = {
+                nombre: values.nombre,
+                apellido: values.apellido,
+                email: values.email,
+                telefono: values.telefono,
+                rol: values.rol,
+            }
+
+            const { error: dbError } = await supabase
+                .from('usuario')
+                .update(updates)
+                .eq('id', usuarioEditando.id)
+            if (dbError) throw dbError
+
+            const authUpdates = { email: values.email, user_metadata: { rol: values.rol, nombre: values.nombre } }
+            if (values.password) authUpdates.password = values.password
+
+            const { error: authError } = await supabaseAdmin.auth.admin.updateUserById(usuarioEditando.id, authUpdates)
+            if (authError) throw authError
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['usuarios'] })
+            cerrarModal()
+        },
+        onError: (err) => setErrorMsg(err.message || 'Error al editar el usuario'),
+    })
+
+    const eliminarUsuario = useMutation({
+        mutationFn: async (u) => {
+            const { error: dbError } = await supabase.from('usuario').delete().eq('id', u.id)
+            if (dbError) throw dbError
+            const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(u.id)
+            if (authError) throw authError
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['usuarios'] })
+            setUsuarioEliminando(null)
+        },
+        onError: (err) => setErrorMsg(err.message || 'Error al eliminar el usuario'),
+    })
+
+    const onSubmit = (values) => {
+        setErrorMsg('')
+        if (usuarioEditando) editarUsuario.mutate(values)
+        else crearUsuario.mutate(values)
+    }
 
     const cardStyle = {
         background: 'rgba(13,31,60,0.45)',
@@ -106,17 +179,19 @@ export default function Personal() {
         marginBottom: '6px',
     }
 
+    const isPending = crearUsuario.isPending || editarUsuario.isPending
+
     return (
-
-
         <div style={{
-            backgroundColor: "rgba(13, 31, 60, 0.65)",
-            backdropFilter: "blur(12px)",
-            WebkitBackdropFilter: "blur(12px)",
-            border: "1px solid rgba(255,255,255,0.08)",
-            borderRadius: "12px",
+            backgroundColor: 'rgba(13,31,60,0.65)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: '12px',
+            height: 'calc(100vh - 90px)',
+            overflowY: 'auto',
+            padding: '24px',
         }}>
-            
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                 <div>
                     <h1 style={{ color: 'rgba(255,255,255,0.9)', fontSize: '22px', fontWeight: 600, margin: 0 }}>Personal</h1>
@@ -125,7 +200,7 @@ export default function Personal() {
                     </p>
                 </div>
                 <button
-                    onClick={() => { setModalOpen(true); setErrorMsg('') }}
+                    onClick={abrirCrear}
                     style={{
                         padding: '10px 20px',
                         background: 'rgba(37,99,235,0.8)',
@@ -149,7 +224,7 @@ export default function Personal() {
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                         <thead>
                             <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-                                {['Nombre', 'Email', 'Teléfono', 'Rol', 'Estado'].map(h => (
+                                {['Nombre', 'Email', 'Teléfono', 'Rol', 'Estado', ''].map(h => (
                                     <th key={h} style={{
                                         padding: '14px 20px', textAlign: 'left',
                                         fontSize: '12px', fontWeight: 500,
@@ -199,6 +274,32 @@ export default function Personal() {
                                                 background: ec.bg, color: ec.color, border: `1px solid ${ec.border}`,
                                             }}>{ec.label}</span>
                                         </td>
+                                        <td style={{ padding: '14px 20px' }}>
+                                            <div style={{ display: 'flex', gap: '8px' }}>
+                                                <button
+                                                    onClick={() => abrirEditar(u)}
+                                                    style={{
+                                                        padding: '6px 12px',
+                                                        background: 'rgba(37,99,235,0.15)',
+                                                        border: '1px solid rgba(37,99,235,0.3)',
+                                                        borderRadius: '6px',
+                                                        color: '#60a5fa', fontSize: '12px',
+                                                        cursor: 'pointer', fontWeight: 500,
+                                                    }}
+                                                >Editar</button>
+                                                <button
+                                                    onClick={() => setUsuarioEliminando(u)}
+                                                    style={{
+                                                        padding: '6px 12px',
+                                                        background: 'rgba(239,68,68,0.15)',
+                                                        border: '1px solid rgba(239,68,68,0.3)',
+                                                        borderRadius: '6px',
+                                                        color: '#f87171', fontSize: '12px',
+                                                        cursor: 'pointer', fontWeight: 500,
+                                                    }}
+                                                >Eliminar</button>
+                                            </div>
+                                        </td>
                                     </tr>
                                 )
                             })}
@@ -207,6 +308,7 @@ export default function Personal() {
                 )}
             </div>
 
+            {/* Modal crear/editar */}
             {modalOpen && (
                 <div style={{
                     position: 'fixed', inset: 0, zIndex: 50,
@@ -216,11 +318,15 @@ export default function Personal() {
                     <div style={{ ...cardStyle, width: '100%', maxWidth: '520px', padding: '28px', boxShadow: '0 24px 60px rgba(0,0,0,0.5)' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
                             <div>
-                                <h2 style={{ color: 'rgba(255,255,255,0.9)', fontSize: '18px', fontWeight: 600, margin: 0 }}>Nuevo usuario</h2>
-                                <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '13px', margin: '4px 0 0' }}>Se creará acceso al sistema</p>
+                                <h2 style={{ color: 'rgba(255,255,255,0.9)', fontSize: '18px', fontWeight: 600, margin: 0 }}>
+                                    {usuarioEditando ? 'Editar usuario' : 'Nuevo usuario'}
+                                </h2>
+                                <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '13px', margin: '4px 0 0' }}>
+                                    {usuarioEditando ? 'Modificá los datos del usuario' : 'Se creará acceso al sistema'}
+                                </p>
                             </div>
                             <button
-                                onClick={() => { setModalOpen(false); reset(); setErrorMsg('') }}
+                                onClick={cerrarModal}
                                 style={{
                                     background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)',
                                     borderRadius: '8px', color: 'rgba(255,255,255,0.6)',
@@ -230,7 +336,7 @@ export default function Personal() {
                             >×</button>
                         </div>
 
-                        <form onSubmit={handleSubmit(values => { setErrorMsg(''); crearUsuario.mutate(values) })}>
+                        <form onSubmit={handleSubmit(onSubmit)}>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
                                 <div>
                                     <label style={labelStyle}>Nombre</label>
@@ -269,7 +375,9 @@ export default function Personal() {
                             </div>
 
                             <div style={{ marginBottom: '24px' }}>
-                                <label style={labelStyle}>Contraseña</label>
+                                <label style={labelStyle}>
+                                    {usuarioEditando ? 'Nueva contraseña (dejá vacío para no cambiar)' : 'Contraseña'}
+                                </label>
                                 <input {...register('password')} type="password" placeholder="Mínimo 6 caracteres" style={inputStyle} />
                                 {errors.password && <p style={{ color: '#f87171', fontSize: '12px', marginTop: '4px' }}>{errors.password.message}</p>}
                             </div>
@@ -285,7 +393,7 @@ export default function Personal() {
                             <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
                                 <button
                                     type="button"
-                                    onClick={() => { setModalOpen(false); reset(); setErrorMsg('') }}
+                                    onClick={cerrarModal}
                                     style={{
                                         padding: '10px 20px', background: 'rgba(255,255,255,0.06)',
                                         border: '1px solid rgba(255,255,255,0.10)', borderRadius: '8px',
@@ -294,17 +402,67 @@ export default function Personal() {
                                 >Cancelar</button>
                                 <button
                                     type="submit"
-                                    disabled={crearUsuario.isPending}
+                                    disabled={isPending}
                                     style={{
                                         padding: '10px 24px',
-                                        background: crearUsuario.isPending ? 'rgba(37,99,235,0.4)' : 'rgba(37,99,235,0.8)',
+                                        background: isPending ? 'rgba(37,99,235,0.4)' : 'rgba(37,99,235,0.8)',
                                         border: '1px solid rgba(37,99,235,0.5)', borderRadius: '8px',
                                         color: 'white', fontSize: '14px', fontWeight: 500,
-                                        cursor: crearUsuario.isPending ? 'not-allowed' : 'pointer',
+                                        cursor: isPending ? 'not-allowed' : 'pointer',
                                     }}
-                                >{crearUsuario.isPending ? 'Creando...' : 'Crear usuario'}</button>
+                                >
+                                    {isPending ? 'Guardando...' : usuarioEditando ? 'Guardar cambios' : 'Crear usuario'}
+                                </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal confirmación eliminar */}
+            {usuarioEliminando && (
+                <div style={{
+                    position: 'fixed', inset: 0, zIndex: 50,
+                    background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px',
+                }}>
+                    <div style={{ ...cardStyle, width: '100%', maxWidth: '420px', padding: '28px', boxShadow: '0 24px 60px rgba(0,0,0,0.5)' }}>
+                        <h2 style={{ color: 'rgba(255,255,255,0.9)', fontSize: '18px', fontWeight: 600, margin: '0 0 10px' }}>
+                            Eliminar usuario
+                        </h2>
+                        <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '14px', margin: '0 0 24px' }}>
+                            ¿Estás seguro que querés eliminar a <span style={{ color: 'rgba(255,255,255,0.9)', fontWeight: 500 }}>{usuarioEliminando.nombre} {usuarioEliminando.apellido}</span>? Esta acción no se puede deshacer.
+                        </p>
+                        {errorMsg && (
+                            <div style={{
+                                marginBottom: '16px', padding: '12px 16px',
+                                background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
+                                borderRadius: '8px', color: '#f87171', fontSize: '13px',
+                            }}>{errorMsg}</div>
+                        )}
+                        <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                            <button
+                                onClick={() => { setUsuarioEliminando(null); setErrorMsg('') }}
+                                style={{
+                                    padding: '10px 20px', background: 'rgba(255,255,255,0.06)',
+                                    border: '1px solid rgba(255,255,255,0.10)', borderRadius: '8px',
+                                    color: 'rgba(255,255,255,0.6)', fontSize: '14px', cursor: 'pointer',
+                                }}
+                            >Cancelar</button>
+                            <button
+                                onClick={() => eliminarUsuario.mutate(usuarioEliminando)}
+                                disabled={eliminarUsuario.isPending}
+                                style={{
+                                    padding: '10px 24px',
+                                    background: eliminarUsuario.isPending ? 'rgba(239,68,68,0.3)' : 'rgba(239,68,68,0.8)',
+                                    border: '1px solid rgba(239,68,68,0.5)', borderRadius: '8px',
+                                    color: 'white', fontSize: '14px', fontWeight: 500,
+                                    cursor: eliminarUsuario.isPending ? 'not-allowed' : 'pointer',
+                                }}
+                            >
+                                {eliminarUsuario.isPending ? 'Eliminando...' : 'Eliminar'}
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
