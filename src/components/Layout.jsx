@@ -32,7 +32,7 @@ const Layout = () => {
             </div>
 
                 {/* Contenido */}
-                <div className="flex-1">
+                <div className="flex-1" style={{overflow: 'hidden'}}>
                     <Outlet />
                 </div>
 

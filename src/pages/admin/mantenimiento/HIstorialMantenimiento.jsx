@@ -7,6 +7,7 @@ export default function HistorialMantenimiento() {
     const [filtroFecha, setFiltroFecha] = useState('')
     const [filtroSerie, setFiltroSerie] = useState('')
     const queryClient = useQueryClient()
+    const [filtroCliente, setFiltroCliente] = useState('')
 
     const { data: asignaciones = [], isLoading } = useQuery({
         queryKey: ['asignaciones_historial'],
@@ -44,10 +45,10 @@ export default function HistorialMantenimiento() {
     const completados = asignaciones.filter(a => {
         if (a.estado !== 'completado') return false
         const equipo = a.equipo
+        if (filtroCliente && !equipo?.cliente?.nombre?.toLowerCase().includes(filtroCliente.toLowerCase())) return false
         if (filtroEquipo && !`${equipo?.marca} ${equipo?.modelo}`.toLowerCase().includes(filtroEquipo.toLowerCase())) return false
         if (filtroSerie && !equipo?.num_serie?.toLowerCase().includes(filtroSerie.toLowerCase())) return false
         if (filtroFecha && !a.fecha_asignacion?.startsWith(filtroFecha)) return false
-        if (filtroFecha && !a.usuario?.nombre?.startsWith(filtroFecha)) return false
         return true
     })
 
@@ -109,6 +110,7 @@ export default function HistorialMantenimiento() {
                 <td style={tdStyle}>{a.tipo_mantenimiento?.nombre || '—'}</td>
                 <td style={tdStyle}>{formatFecha(a.fecha_asignacion)}</td>
                 <td style={tdStyle}>{formatFecha(a.fecha_estimada)}</td>
+                
                 {mostrarBoton && (
                     <td style={tdStyle}>
                         <button
@@ -148,7 +150,8 @@ export default function HistorialMantenimiento() {
             backdropFilter: 'blur(12px)',
             border: '1px solid rgba(255,255,255,0.08)',
             borderRadius: '12px',
-            minHeight: 'calc(100vh - 90px)',
+            height: 'calc(100vh - 90px)',
+            overflowY: 'auto',
         }}>
             <div style={{ marginBottom: '28px' }}>
                 <h1 style={{ color: 'rgba(255,255,255,0.9)', fontSize: '22px', fontWeight: 600, margin: 0 }}>Historial</h1>
@@ -194,8 +197,8 @@ export default function HistorialMantenimiento() {
                         <input
                             style={inputStyle}
                             placeholder="Buscar cliente..."
-                            value={filtroEquipo}
-                            onChange={e => setFiltroEquipo(e.target.value)}
+                            value={filtroCliente}
+                            onChange={e => setFiltroCliente(e.target.value)}
                         />
                         <input
                             style={inputStyle}

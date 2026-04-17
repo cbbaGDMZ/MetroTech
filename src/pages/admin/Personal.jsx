@@ -107,7 +107,16 @@ export default function Personal() {
     }
 
     return (
-        <div style={{ padding: '0 0 0 12px' }}>
+
+
+        <div style={{
+            backgroundColor: "rgba(13, 31, 60, 0.65)",
+            backdropFilter: "blur(12px)",
+            WebkitBackdropFilter: "blur(12px)",
+            border: "1px solid rgba(255,255,255,0.08)",
+            borderRadius: "12px",
+        }}>
+            
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                 <div>
                     <h1 style={{ color: 'rgba(255,255,255,0.9)', fontSize: '22px', fontWeight: 600, margin: 0 }}>Personal</h1>
