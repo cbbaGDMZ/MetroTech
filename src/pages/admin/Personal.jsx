@@ -13,6 +13,14 @@ const schema = z.object({
     rol: z.enum(['admin', 'tecnico', 'secretaria'], { required_error: 'Seleccioná un rol' }),
     password: z.string().min(6, 'Mínimo 6 caracteres'),
 })
+// Para editar sin pedir contraseña
+const schemaEdit = z.object({
+    nombre: z.string().min(2, 'Mínimo 2 caracteres').max(50, 'Máximo 50 caracteres').regex(/^[a-zA-ZáéíóúÁÉÍÓÚüÜ\s]+$/, 'Solo letras y espacios'),
+    apellido: z.string().min(2, 'Mínimo 2 caracteres').max(50, 'Máximo 50 caracteres').regex(/^[a-zA-ZáéíóúÁÉÍÓÚüÜ\s]+$/, 'Solo letras y espacios'),
+    email: z.string().email('Email inválido'),
+    telefono: z.string().min(7, 'Mínimo 7 dígitos').max(8, 'Máximo 8 dígitos').regex(/^\d+$/, 'Solo números'),
+    rol: z.enum(['admin', 'tecnico', 'secretaria'], { required_error: 'Seleccioná un rol' }),
+})
 
 const fetchUsuarios = async () => {
     const { data, error } = await supabase
@@ -35,6 +43,7 @@ const estadoColor = (activo) => activo
 
 export default function Personal() {
     const [modalOpen, setModalOpen] = useState(false)
+    const [userEditing, setUserEditing] = useState(null) // Guarda el usuario que se está editando
     const [errorMsg, setErrorMsg] = useState('')
     const queryClient = useQueryClient()
 
@@ -44,9 +53,9 @@ export default function Personal() {
     })
 
     const { register, handleSubmit, reset, formState: { errors } } = useForm({
-        resolver: zodResolver(schema),
+        resolver: zodResolver(userEditing ? schemaEdit : schema),
     })
-
+    // Para crear un nuevo usuario
     const crearUsuario = useMutation({
         mutationFn: async (values) => {
             const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
@@ -77,6 +86,30 @@ export default function Personal() {
         },
         onError: (err) => {
             setErrorMsg(err.message || 'Error al crear el usuario')
+        },
+    })
+    // Para actualizar un usuario 
+    const updateUser = useMutation({
+        mutationFn: async (values) => {
+            const { error: dbError } = await supabase.from('usuario').update({
+                nombre: values.nombre,
+                apellido: values.apellido,
+                email: values.email,
+                telefono: values.telefono,
+                rol: values.rol
+            })
+            .eq('id', userEditing.id)
+            if (dbError) throw dbError
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['usuarios'] })
+            reset()
+            setModalOpen(false)
+            setUserEditing(null)
+            setErrorMsg('')
+        },
+        onError: (err) => {
+            setErrorMsg(err.message || 'Error al actualizar el usuario')
         },
     })
 
@@ -116,7 +149,13 @@ export default function Personal() {
                     </p>
                 </div>
                 <button
-                    onClick={() => { setModalOpen(true); setErrorMsg('') }}
+                    onClick={() => { setUserEditing(null); reset({
+                    nombre: '',
+                    apellido: '',
+                    email: '',
+                    telefono: '',
+                    rol: '',
+                    password: '',}); setErrorMsg(''); setModalOpen(true) }}
                     style={{
                         padding: '10px 20px',
                         background: 'rgba(37,99,235,0.8)',
@@ -124,8 +163,7 @@ export default function Personal() {
                         borderRadius: '8px',
                         color: 'white', fontSize: '14px', fontWeight: 500,
                         cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px',
-                    }}
-                >
+                    }}>
                     <span style={{ fontSize: '18px', lineHeight: 1 }}>+</span>
                     Nuevo usuario
                 </button>
@@ -140,7 +178,7 @@ export default function Personal() {
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                         <thead>
                             <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-                                {['Nombre', 'Email', 'Teléfono', 'Rol', 'Estado'].map(h => (
+                                {['Nombre', 'Email', 'Teléfono', 'Rol', 'Estado',''].map(h => (
                                     <th key={h} style={{
                                         padding: '14px 20px', textAlign: 'left',
                                         fontSize: '12px', fontWeight: 500,
@@ -190,6 +228,21 @@ export default function Personal() {
                                                 background: ec.bg, color: ec.color, border: `1px solid ${ec.border}`,
                                             }}>{ec.label}</span>
                                         </td>
+                                        <td style={{ padding: '14px 20px' }}>
+                                            <button
+                                                onClick={() => { 
+                                                    setUserEditing(u);
+                                                    reset({// Cargar los datos del usuario en el formulario para editar
+                                                        nombre: u.nombre,
+                                                        apellido: u.apellido,
+                                                        email: u.email,
+                                                        telefono: u.telefono,
+                                                        rol: u.rol,
+                                                        password: '', // No se muestra la contraseña actual por seguridad
+                                                    }); 
+                                                    setModalOpen(true); setErrorMsg('') }}
+                                            >Editar</button>
+                                        </td>
                                     </tr>
                                 )
                             })}
@@ -207,11 +260,11 @@ export default function Personal() {
                     <div style={{ ...cardStyle, width: '100%', maxWidth: '520px', padding: '28px', boxShadow: '0 24px 60px rgba(0,0,0,0.5)' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
                             <div>
-                                <h2 style={{ color: 'rgba(255,255,255,0.9)', fontSize: '18px', fontWeight: 600, margin: 0 }}>Nuevo usuario</h2>
-                                <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '13px', margin: '4px 0 0' }}>Se creará acceso al sistema</p>
+                                <h2 style={{ color: 'rgba(255,255,255,0.9)', fontSize: '18px', fontWeight: 600, margin: 0 }}>{userEditing ? 'Editar usuario' : 'Nuevo usuario'}</h2>
+                                <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '13px', margin: '4px 0 0' }}>{userEditing ? 'Edita los datos del usuario' : 'Se creará acceso al sistema'}</p>
                             </div>
                             <button
-                                onClick={() => { setModalOpen(false); reset(); setErrorMsg('') }}
+                                onClick={() => { setModalOpen(false); setUserEditing(null); reset(); setErrorMsg('') }}
                                 style={{
                                     background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)',
                                     borderRadius: '8px', color: 'rgba(255,255,255,0.6)',
@@ -221,7 +274,12 @@ export default function Personal() {
                             >×</button>
                         </div>
 
-                        <form onSubmit={handleSubmit(values => { setErrorMsg(''); crearUsuario.mutate(values) })}>
+                        <form onSubmit={handleSubmit(values => { setErrorMsg('');
+                            if (userEditing) {
+                                updateUser.mutate(values)
+                            } else {
+                                crearUsuario.mutate(values)
+                            }})}>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
                                 <div>
                                     <label style={labelStyle}>Nombre</label>
@@ -258,12 +316,14 @@ export default function Personal() {
                                     {errors.rol && <p style={{ color: '#f87171', fontSize: '12px', marginTop: '4px' }}>{errors.rol.message}</p>}
                                 </div>
                             </div>
-
-                            <div style={{ marginBottom: '24px' }}>
-                                <label style={labelStyle}>Contraseña</label>
-                                <input {...register('password')} type="password" placeholder="Mínimo 6 caracteres" style={inputStyle} />
-                                {errors.password && <p style={{ color: '#f87171', fontSize: '12px', marginTop: '4px' }}>{errors.password.message}</p>}
-                            </div>
+                            
+                            {!userEditing && ( //Si se esta editando un usuario ocultar contraseña
+                                <div style={{ marginBottom: '24px' }}>
+                                    <label style={labelStyle}>Contraseña</label>
+                                    <input {...register('password')} type="password" placeholder="Mínimo 6 caracteres" style={inputStyle} />
+                                    {errors.password && <p style={{ color: '#f87171', fontSize: '12px', marginTop: '4px' }}>{errors.password.message}</p>}
+                                </div>
+                            )}
 
                             {errorMsg && (
                                 <div style={{
@@ -276,7 +336,7 @@ export default function Personal() {
                             <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
                                 <button
                                     type="button"
-                                    onClick={() => { setModalOpen(false); reset(); setErrorMsg('') }}
+                                    onClick={() => { setModalOpen(false); setUserEditing(null); reset(); setErrorMsg('') }}
                                     style={{
                                         padding: '10px 20px', background: 'rgba(255,255,255,0.06)',
                                         border: '1px solid rgba(255,255,255,0.10)', borderRadius: '8px',
@@ -285,15 +345,15 @@ export default function Personal() {
                                 >Cancelar</button>
                                 <button
                                     type="submit"
-                                    disabled={crearUsuario.isPending}
+                                    disabled={crearUsuario.isPending || updateUser.isPending}
                                     style={{
                                         padding: '10px 24px',
-                                        background: crearUsuario.isPending ? 'rgba(37,99,235,0.4)' : 'rgba(37,99,235,0.8)',
+                                        background: (crearUsuario.isPending || updateUser.isPending) ? 'rgba(37,99,235,0.4)' : 'rgba(37,99,235,0.8)',
                                         border: '1px solid rgba(37,99,235,0.5)', borderRadius: '8px',
                                         color: 'white', fontSize: '14px', fontWeight: 500,
-                                        cursor: crearUsuario.isPending ? 'not-allowed' : 'pointer',
+                                        cursor:(crearUsuario.isPending || updateUser.isPending) ? 'not-allowed' : 'pointer'
                                     }}
-                                >{crearUsuario.isPending ? 'Creando...' : 'Crear usuario'}</button>
+                                >{crearUsuario.isPending ? 'Creando...' : updateUser.isPending ? 'Guardando...' : userEditing ? 'Actualizar usuario' : 'Crear usuario'}</button>
                             </div>
                         </form>
                     </div>
